@@ -12,7 +12,8 @@ class ArticleController extends Controller
      */
     public function index()
     {
-        //
+        $articles = Article::latest()->paginate(5);
+        return view('/article/article', ['articles'=>$articles]);
     }
 
     /**
@@ -20,7 +21,7 @@ class ArticleController extends Controller
      */
     public function create()
     {
-        //
+        return view('article.create');
     }
 
     /**
@@ -28,7 +29,18 @@ class ArticleController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'date'=>'required|date',
+            'title'=>'required|min:10',
+            'text'=>'max:100'
+        ]);
+        $article = new Article;
+        $article->date_public = $request->date;
+        $article->title = request('title');
+        $article->text = $request->text;
+        $article->users_id = 1;
+        $article->save();
+        return redirect()->route('article.index')->with('message','Create successful');
     }
 
     /**
@@ -36,7 +48,7 @@ class ArticleController extends Controller
      */
     public function show(Article $article)
     {
-        //
+        return view('article.show', ['article'=> $article]);
     }
 
     /**
@@ -44,7 +56,7 @@ class ArticleController extends Controller
      */
     public function edit(Article $article)
     {
-        //
+        return view('article.edit', ['article'=> $article]);
     }
 
     /**
@@ -52,7 +64,18 @@ class ArticleController extends Controller
      */
     public function update(Request $request, Article $article)
     {
-        //
+        $request->validate([
+            'date'=>'required|date',
+            'title'=>'required|min:10',
+            'text'=>'max:100'
+        ]);
+        $article = new Article;
+        $article->date_public = $request->date;
+        $article->title = request('title');
+        $article->text = $request->text;
+        $article->users_id = 1;
+        $article->save();
+        return redirect()->route('article.show', ['article'=>$article->id])->with('message','Update successful');
     }
 
     /**
@@ -60,6 +83,7 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article)
     {
-        //
+        $article->delete();
+        return redirect()->route('article.index')->with('message','Delete successful');
     }
 }
