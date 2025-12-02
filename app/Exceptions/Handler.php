@@ -3,6 +3,8 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -26,5 +28,32 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    /**
+     * Render an exception into an HTTP response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Throwable  $exception
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Throwable
+     */
+    public function render($request, Throwable $exception)
+    {
+        // Обработка исключений авторизации (политики и шлюзы)
+        if ($exception instanceof AuthorizationException) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'У вас нет прав для выполнения этого действия.',
+                    'error' => 'Доступ запрещен'
+                ], 403);
+            }
+
+            return redirect()->back()
+                ->with('error', 'У вас нет прав для выполнения этого действия. Только модераторы могут выполнять CRUD операции со статьями и комментариями.');
+        }
+
+        return parent::render($request, $exception);
     }
 }

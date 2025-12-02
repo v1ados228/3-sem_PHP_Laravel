@@ -21,15 +21,15 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h5 class="card-title">Edit comment</h5>
+        <h5 class="card-title">Edit Comment</h5>
         <form action="/article/{{$article->id}}/comment/{{$comment->id}}" method="POST">
             @CSRF
             @METHOD('PUT')
             <div class="mb-3">
-                <label for="text" class="form-label">The text of the comment</label>
+                <label for="text" class="form-label">Comment Text</label>
                 <textarea name="text" id="text" class="form-control" rows="5" required minlength="3" maxlength="500">{{$comment->text}}</textarea>
             </div>
-            <button style="background-color: #0d6efd;" type="submit" class="btn btn-primary">Update</button>
+                    <button style="background-color: #0d6efd;" type="submit" class="btn btn-primary">Update</button>
             <a href="/article/{{$article->id}}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>

@@ -42,4 +42,36 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    /**
+     * Получить роли пользователя
+     */
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_user');
+    }
+
+    /**
+     * Проверка, имеет ли пользователь определенную роль
+     */
+    public function hasRole(string $roleSlug): bool
+    {
+        return $this->roles()->where('slug', $roleSlug)->exists();
+    }
+
+    /**
+     * Проверка, является ли пользователь модератором
+     */
+    public function isModerator(): bool
+    {
+        return $this->hasRole('moderator');
+    }
+
+    /**
+     * Проверка, является ли пользователь читателем
+     */
+    public function isReader(): bool
+    {
+        return $this->hasRole('reader');
+    }
 }

@@ -12,6 +12,9 @@ class ArticleController extends Controller
      */
     public function index()
     {
+        // Проверка прав через политику
+        $this->authorize('viewAny', Article::class);
+        
         $articles = Article::latest()->paginate(5);
         return view('/article/article', ['articles'=>$articles]);
     }
@@ -21,6 +24,9 @@ class ArticleController extends Controller
      */
     public function create()
     {
+        // Проверка прав через политику
+        $this->authorize('create', Article::class);
+        
         return view('article.create');
     }
 
@@ -29,6 +35,9 @@ class ArticleController extends Controller
      */
     public function store(Request $request)
     {
+        // Проверка прав через политику
+        $this->authorize('create', Article::class);
+        
         $request->validate([
             'date'=>'required|date',
             'title'=>'required|min:10',
@@ -48,6 +57,9 @@ class ArticleController extends Controller
      */
     public function show(Article $article)
     {
+        // Проверка прав через политику
+        $this->authorize('view', $article);
+        
         $article->load('comments');
         return view('article.show', ['article'=> $article]);
     }
@@ -57,6 +69,9 @@ class ArticleController extends Controller
      */
     public function edit(Article $article)
     {
+        // Проверка прав через политику
+        $this->authorize('update', $article);
+        
         return view('article.edit', ['article'=> $article]);
     }
 
@@ -65,6 +80,9 @@ class ArticleController extends Controller
      */
     public function update(Request $request, Article $article)
     {
+        // Проверка прав через политику
+        $this->authorize('update', $article);
+        
         $request->validate([
             'date'=>'required|date',
             'title'=>'required|min:10',
@@ -83,6 +101,9 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article)
     {
+        // Проверка прав через политику
+        $this->authorize('delete', $article);
+        
         $article->delete();
         return redirect()->route('article.index')->with('message','Delete successful');
     }

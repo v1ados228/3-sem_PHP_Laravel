@@ -77,6 +77,10 @@ class CommentController extends Controller
         if ($comment->article_id !== $article->id) {
             abort(404);
         }
+        
+        // Проверка прав через шлюз (только модератор может редактировать)
+        $this->authorize('is-moderator');
+        
         return view('comment.edit', ['comment' => $comment, 'article' => $article]);
     }
 
@@ -89,6 +93,9 @@ class CommentController extends Controller
         if ($comment->article_id !== $article->id) {
             abort(404);
         }
+
+        // Проверка прав через шлюз (только модератор может обновлять)
+        $this->authorize('is-moderator');
 
         $request->validate([
             'text' => 'required|min:3|max:500',
@@ -110,6 +117,9 @@ class CommentController extends Controller
         if ($comment->article_id !== $article->id) {
             abort(404);
         }
+
+        // Проверка прав через шлюз (только модератор может удалять)
+        $this->authorize('is-moderator');
 
         $comment->delete();
 

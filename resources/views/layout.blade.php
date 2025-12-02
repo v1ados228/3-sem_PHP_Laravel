@@ -846,33 +846,35 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('main.index') }}">Main</a>
+                            <a class="nav-link" href="{{ route('main.index') }}">Home</a>
                         </li>
                         @auth
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('article.index') }}">Articles</a>
                         </li>
+                        @can('create', App\Models\Article::class)
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('article.create') }}">Create article</a>
+                            <a class="nav-link" href="{{ route('article.create') }}">Create Article</a>
                         </li>
+                        @endcan
                         @endauth
                         <li class="nav-item">
-                            <a class="nav-link" href="/about">About us</a>
+                            <a class="nav-link" href="/about">About</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/contact">Contacts</a>
+                            <a class="nav-link" href="/contact">Contact</a>
                         </li>
                     </ul>
                     <div class="d-flex gap-2">
                         @auth
-                            <span class="navbar-text me-3">Hi, {{ Auth::user()->name }}!</span>
+                            <span class="navbar-text me-3">Hello, {{ Auth::user()->name }}!</span>
                             <form action="{{ route('auth.logout') }}" method="POST" class="d-inline">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-danger">Exit</button>
+                                <button type="submit" class="btn btn-outline-danger">Logout</button>
                             </form>
                         @else
-                            <a href="{{ route('auth.login.show') }}" class="btn btn-outline-primary">Login</a>
-                            <a href="{{ route('auth.register.show') }}" class="btn btn-outline-success">Registration</a>
+                            <a href="{{ route('auth.login.show') }}" class="btn btn-outline-primary">Sign In</a>
+                            <a href="{{ route('auth.register.show') }}" class="btn btn-outline-success">Register</a>
                         @endauth
                     </div>
                 </div>
