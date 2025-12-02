@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MainController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\CommentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,11 @@ use App\Http\Controllers\ArticleController;
 
 //Article
 Route::resource('/article', ArticleController::class);
+
+//Comments
+Route::resource('/article/{article}/comment', CommentController::class)->except(['index', 'show']);
+Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
+Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
 
 //Auth
 Route::get('/auth/signin', [AuthController::class, 'signin']);

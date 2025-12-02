@@ -5,30 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Article extends Model
+class Comment extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'title',
         'text',
+        'article_id',
         'users_id',
-        'date_public',
     ];
 
     /**
-     * Получить комментарии к статье
+     * Получить статью, к которой относится комментарий
      */
-    public function comments()
+    public function article()
     {
-        return $this->hasMany(Comment::class, 'article_id');
+        return $this->belongsTo(Article::class, 'article_id');
     }
 
     /**
-     * Получить пользователя, создавшего статью
+     * Получить пользователя, который оставил комментарий
      */
     public function user()
     {
         return $this->belongsTo(User::class, 'users_id');
     }
 }
+
