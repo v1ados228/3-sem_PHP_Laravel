@@ -22,4 +22,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Комментарии -->
+    <div class="mt-4">
+        <h4>Comments ({{$article->comments->count()}})</h4>
+        
+        <!-- Форма для добавления комментария -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Add a comment</h5>
+                <form action="/article/{{$article->id}}/comment" method="post">
+                    @csrf
+                    <div class="mb-3">
+                        <textarea class="form-control" name="text" rows="3" placeholder="Enter your comment..." required minlength="3" maxlength="500"></textarea>
+                    </div>
+                    <button style="background-color: #0d6efd;" type="submit" class="btn btn-primary">Send</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Список комментариев -->
+        @if($article->comments->count() > 0)
+            @foreach($article->comments as $comment)
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <p class="card-text">{{$comment->text}}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{$comment->created_at->format('d.m.Y H:i')}}</small>
+                            <div>
+                                <a href="/article/{{$article->id}}/comment/{{$comment->id}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form action="/article/{{$article->id}}/comment/{{$comment->id}}" method="post" class="d-inline">
+                                    @METHOD("DELETE")
+                                    @CSRF
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        @else
+            <div class="alert alert-info">There are no comments yet.</div>
+        @endif
+    </div>
 @endsection

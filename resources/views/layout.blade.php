@@ -846,34 +846,34 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="/article">Article</a>
+                            <a class="nav-link" href="{{ route('main.index') }}">Main</a>
                         </li>
-                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="/article/create">Create Article</a>
+                        @auth
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('article.index') }}">Articles</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="/about">About</a>
+                            <a class="nav-link" href="{{ route('article.create') }}">Create article</a>
+                        </li>
+                        @endauth
+                        <li class="nav-item">
+                            <a class="nav-link" href="/about">About us</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/contact">Contacts</a>
                         </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                Dropdown
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">Action</a></li>
-                                <li><a class="dropdown-item" href="#">Another action</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item" href="#">Something else here</a></li>
-                            </ul>
-                        </li>
                     </ul>
-                    <div class="d-flex">
-                        <a href="/auth/signin" class="btn btn-outline-success">SignIn</a>
+                    <div class="d-flex gap-2">
+                        @auth
+                            <span class="navbar-text me-3">Hi, {{ Auth::user()->name }}!</span>
+                            <form action="{{ route('auth.logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-danger">Exit</button>
+                            </form>
+                        @else
+                            <a href="{{ route('auth.login.show') }}" class="btn btn-outline-primary">Login</a>
+                            <a href="{{ route('auth.register.show') }}" class="btn btn-outline-success">Registration</a>
+                        @endauth
                     </div>
                 </div>
             </div>

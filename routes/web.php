@@ -17,21 +17,30 @@ use App\Http\Controllers\CommentController;
 |
 */
 
-//Article
-Route::resource('/article', ArticleController::class);
+//Auth - публичные маршруты (без аутентификации)
+Route::get('/auth/register', [AuthController::class, 'showRegister'])->name('auth.register.show');
+Route::post('/auth/register', [AuthController::class, 'register'])->name('auth.register');
+Route::get('/auth/login', [AuthController::class, 'showLogin'])->name('auth.login.show');
+Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
-//Comments
-Route::resource('/article/{article}/comment', CommentController::class)->except(['index', 'show']);
-Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
-Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
+//Main - публичные маршруты
+Route::get('/', [MainController::class, 'index'])->name('main.index');
+Route::get('/full_image/{img}', [MainController::class, 'show'])->name('main.show');
 
-//Auth
-Route::get('/auth/signin', [AuthController::class, 'signin']);
-Route::post('/auth/registr', [AuthController::class, 'registr']);
-
-//Main
-Route::get('/',[MainController::class, 'index']);
-Route::get('/full_image/{img}',[MainController::class, 'show']);
+//Article - защищенные маршруты (требуется аутентификация)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::resource('/article', ArticleController::class);
+    
+    //Comments - защищенные маршруты
+    Route::post('/article/{article}/comment', [CommentController::class, 'store'])->name('article.comment.store');
+    Route::get('/article/{article}/comment/{comment}/edit', [CommentController::class, 'edit'])->name('article.comment.edit');
+    Route::put('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
+    Route::patch('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
+    Route::delete('/article/{article}/comment/{comment}', [CommentController::class, 'destroy'])->name('article.comment.destroy');
+    Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
+    Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
+});
 
 Route::get('/about', function(){
     return view('main.about');

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Comment;
 use App\Models\Article;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CommentController extends Controller
 {
@@ -34,14 +36,28 @@ class CommentController extends Controller
             'text' => 'required|min:3|max:500',
         ]);
 
-        $comment = new Comment;
-        $comment->text = $request->text;
-        $comment->article_id = $article->id;
-        $comment->users_id = 1; // Временно, можно будет заменить на auth()->id()
-        $comment->save();
+        try {
+            // Получаем ID авторизованного пользователя
+            $userId = auth()->id();
+            
+            if (!$userId) {
+                return redirect()->route('article.show', ['article' => $article->id])
+                    ->with('error', 'Вы должны быть авторизованы для добавления комментариев.');
+            }
 
-        return redirect()->route('article.show', ['article' => $article->id])
-            ->with('message', 'Comment created successfully');
+            $comment = new Comment;
+            $comment->text = $request->text;
+            $comment->article_id = $article->id;
+            $comment->users_id = $userId;
+            $comment->save();
+
+            return redirect()->route('article.show', ['article' => $article->id])
+                ->with('message', 'Comment created successfully');
+        } catch (\Exception $e) {
+            Log::error('Ошибка при сохранении комментария: ' . $e->getMessage());
+            return redirect()->route('article.show', ['article' => $article->id])
+                ->with('error', 'Ошибка при сохранении комментария: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -55,16 +71,25 @@ class CommentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Comment $comment)
+    public function edit(Article $article, Comment $comment)
     {
-        return view('comment.edit', ['comment' => $comment]);
+        // Проверяем, что комментарий принадлежит статье
+        if ($comment->article_id !== $article->id) {
+            abort(404);
+        }
+        return view('comment.edit', ['comment' => $comment, 'article' => $article]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Comment $comment)
+    public function update(Request $request, Article $article, Comment $comment)
     {
+        // Проверяем, что комментарий принадлежит статье
+        if ($comment->article_id !== $article->id) {
+            abort(404);
+        }
+
         $request->validate([
             'text' => 'required|min:3|max:500',
         ]);
@@ -72,19 +97,23 @@ class CommentController extends Controller
         $comment->text = $request->text;
         $comment->save();
 
-        return redirect()->route('article.show', ['article' => $comment->article_id])
+        return redirect()->route('article.show', ['article' => $article->id])
             ->with('message', 'Comment updated successfully');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Comment $comment)
+    public function destroy(Article $article, Comment $comment)
     {
-        $articleId = $comment->article_id;
+        // Проверяем, что комментарий принадлежит статье
+        if ($comment->article_id !== $article->id) {
+            abort(404);
+        }
+
         $comment->delete();
 
-        return redirect()->route('article.show', ['article' => $articleId])
+        return redirect()->route('article.show', ['article' => $article->id])
             ->with('message', 'Comment deleted successfully');
     }
 }
