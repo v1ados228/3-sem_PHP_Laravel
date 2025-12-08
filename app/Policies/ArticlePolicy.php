@@ -30,8 +30,8 @@ class ArticlePolicy
      */
     public function create(User $user): bool
     {
-        // Только модератор может создавать статьи
-        return $user->isModerator();
+        // Любой авторизованный пользователь может создавать статьи
+        return true;
     }
 
     /**
@@ -39,8 +39,8 @@ class ArticlePolicy
      */
     public function update(User $user, Article $article): bool
     {
-        // Только модератор может обновлять статьи
-        return $user->isModerator();
+        // Пользователь может обновлять только свою статью
+        return $article->users_id === $user->id;
     }
 
     /**
@@ -48,8 +48,8 @@ class ArticlePolicy
      */
     public function delete(User $user, Article $article): bool
     {
-        // Только модератор может удалять статьи
-        return $user->isModerator();
+        // Пользователь может удалять только свою статью
+        return $article->users_id === $user->id;
     }
 }
 

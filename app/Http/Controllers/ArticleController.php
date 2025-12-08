@@ -60,7 +60,8 @@ class ArticleController extends Controller
         // Проверка прав через политику
         $this->authorize('view', $article);
         
-        $article->load('comments');
+        // Загружаем комментарии с пользователями
+        $article->load('comments.user');
         return view('article.show', ['article'=> $article]);
     }
 

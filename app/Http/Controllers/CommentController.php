@@ -78,8 +78,8 @@ class CommentController extends Controller
             abort(404);
         }
         
-        // Проверка прав через шлюз (только модератор может редактировать)
-        $this->authorize('is-moderator');
+        // Проверка прав через политику (пользователь может редактировать только свой комментарий)
+        $this->authorize('update', $comment);
         
         return view('comment.edit', ['comment' => $comment, 'article' => $article]);
     }
@@ -94,8 +94,8 @@ class CommentController extends Controller
             abort(404);
         }
 
-        // Проверка прав через шлюз (только модератор может обновлять)
-        $this->authorize('is-moderator');
+        // Проверка прав через политику (пользователь может обновлять только свой комментарий)
+        $this->authorize('update', $comment);
 
         $request->validate([
             'text' => 'required|min:3|max:500',
@@ -118,8 +118,8 @@ class CommentController extends Controller
             abort(404);
         }
 
-        // Проверка прав через шлюз (только модератор может удалять)
-        $this->authorize('is-moderator');
+        // Проверка прав через политику (пользователь может удалять только свой комментарий)
+        $this->authorize('delete', $comment);
 
         $comment->delete();
 

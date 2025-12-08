@@ -68,15 +68,21 @@
                     <div class="card-body">
                         <p class="card-text">{{$comment->text}}</p>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">{{$comment->created_at->format('d.m.Y H:i')}}</small>
-                            @can('is-moderator')
+                            <div>
+                                <small class="text-muted">
+                                    <strong>{{$comment->user->name ?? 'Unknown'}}</strong> • {{$comment->created_at->format('d.m.Y H:i')}}
+                                </small>
+                            </div>
+                            @can('update', $comment)
                             <div>
                                 <a href="/article/{{$article->id}}/comment/{{$comment->id}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                                @can('delete', $comment)
                                 <form action="/article/{{$article->id}}/comment/{{$comment->id}}" method="post" class="d-inline">
                                     @METHOD("DELETE")
                                     @CSRF
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                                 </form>
+                                @endcan
                             </div>
                             @endcan
                         </div>
