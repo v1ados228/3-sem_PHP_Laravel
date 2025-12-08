@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Article;
 use App\Models\User;
+use App\Models\Role;
+use App\Mail\NewCommentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class CommentController extends Controller
 {
@@ -50,6 +53,18 @@ class CommentController extends Controller
             $comment->article_id = $article->id;
             $comment->users_id = $userId;
             $comment->save();
+            
+            // Загружаем связи для email
+            $comment->load('user', 'article.user');
+            
+            // Находим всех модераторов и отправляем им уведомления
+            $moderatorRole = Role::where('slug', 'moderator')->first();
+            if ($moderatorRole) {
+                $moderators = $moderatorRole->users()->get();
+                foreach ($moderators as $moderator) {
+                    Mail::to($moderator->email)->send(new NewCommentNotification($comment));
+                }
+            }
 
             return redirect()->route('article.show', ['article' => $article->id])
                 ->with('message', 'Comment created successfully');

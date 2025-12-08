@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Models\Role;
+use App\Mail\NewArticleNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class ArticleController extends Controller
 {
@@ -49,6 +52,19 @@ class ArticleController extends Controller
         $article->text = $request->text;
         $article->users_id = auth()->id();
         $article->save();
+        
+        // Загружаем связь с пользователем для email
+        $article->load('user');
+        
+        // Находим всех модераторов и отправляем им уведомления
+        $moderatorRole = Role::where('slug', 'moderator')->first();
+        if ($moderatorRole) {
+            $moderators = $moderatorRole->users()->get();
+            foreach ($moderators as $moderator) {
+                Mail::to($moderator->email)->send(new NewArticleNotification($article));
+            }
+        }
+        
         return redirect()->route('article.index')->with('message','Create successful');
     }
 

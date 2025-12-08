@@ -30,8 +30,8 @@ class ArticlePolicy
      */
     public function create(User $user): bool
     {
-        // Любой авторизованный пользователь может создавать статьи
-        return true;
+        // Только модераторы могут создавать статьи
+        return $user->isModerator();
     }
 
     /**
