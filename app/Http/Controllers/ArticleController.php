@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
-use App\Models\Role;
-use App\Mail\NewArticleNotification;
+use App\Jobs\VeryLongJob;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\DB;
 
 class ArticleController extends Controller
 {
@@ -53,16 +54,37 @@ class ArticleController extends Controller
         $article->users_id = auth()->id();
         $article->save();
         
-        // Загружаем связь с пользователем для email
-        $article->load('user');
+        // Перезагружаем модель из базы данных для корректной сериализации
+        $article->refresh();
         
-        // Находим всех модераторов и отправляем им уведомления
-        $moderatorRole = Role::where('slug', 'moderator')->first();
-        if ($moderatorRole) {
-            $moderators = $moderatorRole->users()->get();
-            foreach ($moderators as $moderator) {
-                Mail::to($moderator->email)->send(new NewArticleNotification($article));
-            }
+        // Отправляем задание в очередь для отправки уведомлений
+        try {
+            // Проверяем конфигурацию очереди
+            $queueConnection = config('queue.default');
+            $queueDriver = config("queue.connections.{$queueConnection}.driver");
+            
+            \Log::info("Queue config - Connection: {$queueConnection}, Driver: {$queueDriver}");
+            
+            // Отправляем задание через dispatch с явным указанием очереди
+            $job = new VeryLongJob($article);
+            
+            // Используем dispatch с явным указанием, что задание должно быть в очереди
+            dispatch($job)->onConnection('database')->onQueue('default');
+            
+            \Log::info('Job dispatched to database queue for article ID: ' . $article->id);
+            
+            // Проверяем сразу после отправки
+            $jobsCount = DB::table('jobs')->count();
+            \Log::info("Jobs in queue immediately after dispatch: {$jobsCount}");
+            
+            // Проверяем еще раз через небольшую задержку
+            usleep(100000); // 0.1 секунды
+            $jobsCount2 = DB::table('jobs')->count();
+            \Log::info("Jobs in queue after 0.1s: {$jobsCount2}");
+            
+        } catch (\Exception $e) {
+            \Log::error('Error dispatching job: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
         }
         
         return redirect()->route('article.index')->with('message','Create successful');
