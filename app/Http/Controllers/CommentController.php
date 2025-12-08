@@ -23,6 +23,62 @@ class CommentController extends Controller
     }
 
     /**
+     * Показать комментарии, ожидающие модерации (только для модераторов)
+     */
+    public function moderate()
+    {
+        // Проверяем, что пользователь авторизован
+        if (!auth()->check()) {
+            abort(403, 'Доступ запрещен. Необходима авторизация.');
+        }
+
+        // Проверяем, что пользователь является модератором
+        if (!auth()->user()->isModerator()) {
+            abort(403, 'Доступ запрещен. Только модераторы могут просматривать эту страницу.');
+        }
+
+        $comments = Comment::where('is_approved', false)
+            ->with(['user', 'article'])
+            ->latest()
+            ->paginate(10);
+
+        return view('comment.moderate', ['comments' => $comments]);
+    }
+
+    /**
+     * Одобрить комментарий
+     */
+    public function approve(Comment $comment)
+    {
+        // Проверяем, что пользователь является модератором
+        if (!auth()->user()->isModerator()) {
+            abort(403, 'Доступ запрещен. Только модераторы могут одобрять комментарии.');
+        }
+
+        $comment->is_approved = true;
+        $comment->save();
+
+        return redirect()->route('comment.moderate')
+            ->with('message', 'Комментарий одобрен и опубликован.');
+    }
+
+    /**
+     * Отклонить комментарий
+     */
+    public function reject(Comment $comment)
+    {
+        // Проверяем, что пользователь является модератором
+        if (!auth()->user()->isModerator()) {
+            abort(403, 'Доступ запрещен. Только модераторы могут отклонять комментарии.');
+        }
+
+        $comment->delete();
+
+        return redirect()->route('comment.moderate')
+            ->with('message', 'Комментарий отклонен и удален.');
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create(Article $article)
@@ -52,6 +108,7 @@ class CommentController extends Controller
             $comment->text = $request->text;
             $comment->article_id = $article->id;
             $comment->users_id = $userId;
+            $comment->is_approved = false; // Комментарий требует модерации
             $comment->save();
             
             // Загружаем связи для email
@@ -67,7 +124,7 @@ class CommentController extends Controller
             }
 
             return redirect()->route('article.show', ['article' => $article->id])
-                ->with('message', 'Comment created successfully');
+                ->with('message', 'Ваш комментарий отправлен на модерацию. Он будет опубликован после проверки модератором.');
         } catch (\Exception $e) {
             Log::error('Ошибка при сохранении комментария: ' . $e->getMessage());
             return redirect()->route('article.show', ['article' => $article->id])

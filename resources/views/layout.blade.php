@@ -857,6 +857,11 @@
                             <a class="nav-link" href="{{ route('article.create') }}">Create Article</a>
                         </li>
                         @endcan
+                        @if(auth()->check() && auth()->user()->isModerator())
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('comment.moderate') }}">Moderate Comments</a>
+                        </li>
+                        @endif
                         @endauth
                         <li class="nav-item">
                             <a class="nav-link" href="/about">About</a>

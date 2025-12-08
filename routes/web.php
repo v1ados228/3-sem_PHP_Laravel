@@ -38,6 +38,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
     Route::patch('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
     Route::delete('/article/{article}/comment/{comment}', [CommentController::class, 'destroy'])->name('article.comment.destroy');
+    
+    //Модерация комментариев (только для модераторов) - должно быть ПЕРЕД /comment/{comment}
+    Route::get('/comment/moderate', [CommentController::class, 'moderate'])->name('comment.moderate');
+    Route::patch('/comment/{comment}/approve', [CommentController::class, 'approve'])->name('comment.approve');
+    Route::delete('/comment/{comment}/reject', [CommentController::class, 'reject'])->name('comment.reject');
+    
+    //Общие маршруты комментариев (должны быть после специфичных)
     Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
     Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
 });

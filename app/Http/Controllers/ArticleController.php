@@ -76,8 +76,10 @@ class ArticleController extends Controller
         // Проверка прав через политику
         $this->authorize('view', $article);
         
-        // Загружаем комментарии с пользователями
-        $article->load('comments.user');
+        // Загружаем только одобренные комментарии с пользователями
+        $article->load(['comments' => function ($query) {
+            $query->where('is_approved', true)->with('user');
+        }]);
         return view('article.show', ['article'=> $article]);
     }
 

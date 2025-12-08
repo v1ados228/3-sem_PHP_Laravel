@@ -35,7 +35,7 @@
                 <form action="/article/{{$article->id}}" method="post">
                     @METHOD("DELETE")
                     @CSRF
-                    <button type="submit" class="btn btn-warning">Delete article</button>
+                    <button type="submit" class="btn btn-outline-danger">Delete article</button>
                 </form>
                 @endcan
             </div>
