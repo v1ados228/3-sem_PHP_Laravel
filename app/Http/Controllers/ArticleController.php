@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Jobs\VeryLongJob;
+use App\Events\NewArticleEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -56,6 +57,18 @@ class ArticleController extends Controller
         
         // Перезагружаем модель из базы данных для корректной сериализации
         $article->refresh();
+        $article->load('user');
+        
+        // Отправляем событие для онлайн-уведомления пользователей
+        // Небольшая задержка, чтобы событие успело отправиться перед redirect
+        try {
+            event(new NewArticleEvent($article));
+            \Log::info('NewArticleEvent broadcasted for article ID: ' . $article->id);
+            // Небольшая задержка для отправки события через Pusher
+            usleep(500000); // 0.5 секунды
+        } catch (\Exception $e) {
+            \Log::error('Error broadcasting NewArticleEvent: ' . $e->getMessage());
+        }
         
         // Отправляем задание в очередь для отправки уведомлений
         try {

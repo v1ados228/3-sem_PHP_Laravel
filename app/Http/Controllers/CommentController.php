@@ -59,7 +59,7 @@ class CommentController extends Controller
         $comment->save();
 
         return redirect()->route('comment.moderate')
-            ->with('message', 'Комментарий одобрен и опубликован.');
+            ->with('message', 'The comment has been approved and published.');
     }
 
     /**
