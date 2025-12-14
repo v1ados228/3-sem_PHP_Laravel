@@ -875,8 +875,44 @@
                             <a class="nav-link" href="/contact">Contact</a>
                         </li>
                     </ul>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 align-items-center">
                         @auth
+                            <!-- Выпадающий список уведомлений (только для не-модераторов) -->
+                            @if(!auth()->user()->isModerator())
+                            <div class="dropdown me-3">
+                                <button class="btn btn-outline-info position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
+                                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                                    </svg>
+                                    @if(auth()->user()->unreadNotifications()->count() > 0)
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge">
+                                            {{ auth()->user()->unreadNotifications()->count() }}
+                                        </span>
+                                    @endif
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="max-width: 400px; max-height: 500px; overflow-y: auto;" id="notificationsList">
+                                    @php
+                                        $unreadNotifications = auth()->user()->unreadNotifications()->latest()->take(10)->get();
+                                    @endphp
+                                    @if($unreadNotifications->count() > 0)
+                                        @foreach($unreadNotifications as $notification)
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('notification.read', ['notification' => $notification->id]) }}">
+                                                    <div class="d-flex flex-column">
+                                                        <strong>{{ $notification->data['article_title'] ?? 'Новая статья' }}</strong>
+                                                        <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                        @endforeach
+                                    @else
+                                        <li><span class="dropdown-item-text text-muted">Нет непрочитанных уведомлений</span></li>
+                                    @endif
+                                </ul>
+                            </div>
+                            @endif
+                            
                             <span class="navbar-text me-3">Hello, {{ Auth::user()->name }}!</span>
                             <form action="{{ route('auth.logout') }}" method="POST" class="d-inline">
                                 @csrf
@@ -897,4 +933,82 @@
             @yield('content')
         </div>
     </main>
+    
+    <!-- Bootstrap JS для работы выпадающих списков -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    
+    @auth
+    @if(!auth()->user()->isModerator())
+    <script>
+        // Обновление уведомлений каждые 30 секунд (только для не-модераторов)
+        function updateNotifications() {
+            fetch('{{ route("notifications.unread") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('notificationBadge');
+                    const list = document.getElementById('notificationsList');
+                    
+                    // Обновляем счетчик
+                    if (data.count > 0) {
+                        if (badge) {
+                            badge.textContent = data.count;
+                        } else {
+                            // Создаем badge, если его нет
+                            const button = document.getElementById('notificationsDropdown');
+                            const newBadge = document.createElement('span');
+                            newBadge.id = 'notificationBadge';
+                            newBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                            newBadge.textContent = data.count;
+                            button.appendChild(newBadge);
+                        }
+                    } else {
+                        // Удаляем badge, если нет уведомлений
+                        if (badge) {
+                            badge.remove();
+                        }
+                    }
+                    
+                    // Обновляем список уведомлений
+                    if (list) {
+                        list.innerHTML = '';
+                        if (data.notifications.length > 0) {
+                            data.notifications.forEach(notification => {
+                                const li = document.createElement('li');
+                                const a = document.createElement('a');
+                                a.className = 'dropdown-item';
+                                a.href = '/notification/' + notification.id + '/read';
+                                a.innerHTML = `
+                                    <div class="d-flex flex-column">
+                                        <strong>${notification.article_title || 'Новая статья'}</strong>
+                                        <small class="text-muted">${notification.created_at}</small>
+                                    </div>
+                                `;
+                                li.appendChild(a);
+                                list.appendChild(li);
+                                
+                                const divider = document.createElement('li');
+                                divider.innerHTML = '<hr class="dropdown-divider">';
+                                list.appendChild(divider);
+                            });
+                        } else {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<span class="dropdown-item-text text-muted">Нет непрочитанных уведомлений</span>';
+                            list.appendChild(li);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating notifications:', error);
+                });
+        }
+        
+        // Обновляем уведомления при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotifications();
+            // Обновляем каждые 30 секунд
+            setInterval(updateNotifications, 30000);
+        });
+    </script>
+    @endif
+    @endauth
 </body>

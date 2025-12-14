@@ -5,6 +5,7 @@ use App\Http\Controllers\MainController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
     //Общие маршруты комментариев (должны быть после специфичных)
     Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
     Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
+    
+    //Уведомления
+    Route::get('/notification/{notification}/read', [NotificationController::class, 'markAsReadAndRedirect'])->name('notification.read');
+    Route::get('/notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
 });
 
 Route::get('/about', function(){

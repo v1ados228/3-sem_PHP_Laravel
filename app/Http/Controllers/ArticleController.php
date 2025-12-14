@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Models\Role;
 use App\Jobs\VeryLongJob;
 use App\Events\NewArticleEvent;
+use App\Notifications\NewArticleNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class ArticleController extends Controller
 {
@@ -58,6 +61,59 @@ class ArticleController extends Controller
         // Перезагружаем модель из базы данных для корректной сериализации
         $article->refresh();
         $article->load('user');
+        
+        // Отправляем уведомления всем зарегистрированным пользователям
+        // (зарегистрированным, но не аутентифицированным в данной сессии)
+        // Не отправляем создателю статьи
+        try {
+            // Получаем всех пользователей
+            $allUsers = \App\Models\User::all();
+            $notifiedCount = 0;
+            $currentUserId = auth()->id();
+            \Log::info('Current user ID (article creator): ' . $currentUserId);
+            \Log::info('Total users in system: ' . $allUsers->count());
+            
+            // Отправляем уведомления всем пользователям, кроме создателя статьи
+            foreach ($allUsers as $user) {
+                // Проверяем, что это не текущий пользователь (создатель статьи)
+                if ($user->id !== $currentUserId) {
+                    try {
+                        \Log::info('Attempting to send notification to user ID: ' . $user->id . ' (' . $user->email . ')');
+                        
+                        // Проверяем количество уведомлений до отправки
+                        $notificationsBefore = DB::table('notifications')
+                            ->where('notifiable_type', 'App\Models\User')
+                            ->where('notifiable_id', $user->id)
+                            ->count();
+                        
+                        $user->notify(new NewArticleNotification($article));
+                        
+                        // Проверяем количество уведомлений после отправки
+                        $notificationsAfter = DB::table('notifications')
+                            ->where('notifiable_type', 'App\Models\User')
+                            ->where('notifiable_id', $user->id)
+                            ->count();
+                        
+                        if ($notificationsAfter > $notificationsBefore) {
+                            $notifiedCount++;
+                            \Log::info('✓ Notification successfully sent and saved to DB for user ID: ' . $user->id . ' (' . $user->email . ')');
+                        } else {
+                            \Log::warning('⚠ Notification sent but NOT saved to DB for user ID: ' . $user->id);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('✗ Error sending notification to user ID ' . $user->id . ': ' . $e->getMessage());
+                        \Log::error('Stack trace: ' . $e->getTraceAsString());
+                    }
+                } else {
+                    \Log::info('Skipping user ID: ' . $user->id . ' (is article creator)');
+                }
+            }
+            
+            \Log::info('=== Summary: Notifications sent to ' . $notifiedCount . ' out of ' . ($allUsers->count() - 1) . ' users (excluding creator) for article ID: ' . $article->id . ' ===');
+        } catch (\Exception $e) {
+            \Log::error('Error sending notifications: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+        }
         
         // Отправляем событие для онлайн-уведомления пользователей
         // Небольшая задержка, чтобы событие успело отправиться перед redirect

@@ -47,6 +47,33 @@ class UserSeeder extends Seeder
         if (!$moderator->hasRole('moderator')) {
             $moderator->roles()->attach($moderatorRole->id);
         }
+        
+        // Создаем пользователя с ролью reader
+        $readerRole = Role::where('slug', 'reader')->first();
+        
+        if ($readerRole) {
+            // Ищем существующего читателя по роли
+            $existingReader = User::whereHas('roles', function ($query) use ($readerRole) {
+                $query->where('roles.id', $readerRole->id);
+            })->first();
+
+            if (!$existingReader) {
+                // Создаем нового пользователя-читателя
+                $reader = User::firstOrCreate(
+                    ['email' => 'reader@test.com'],
+                    [
+                        'name' => 'Читатель',
+                        'email' => 'reader@test.com',
+                        'password' => Hash::make('password'),
+                    ]
+                );
+
+                // Присваиваем роль читателя пользователю
+                if (!$reader->hasRole('reader')) {
+                    $reader->roles()->attach($readerRole->id);
+                }
+            }
+        }
     }
 }
 
