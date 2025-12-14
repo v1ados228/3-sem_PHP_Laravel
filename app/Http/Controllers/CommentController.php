@@ -10,6 +10,8 @@ use App\Mail\NewCommentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class CommentController extends Controller
 {
@@ -57,6 +59,15 @@ class CommentController extends Controller
 
         $comment->is_approved = true;
         $comment->save();
+        
+        // Очищаем кэш статьи, чтобы отобразить новый комментарий
+        // Учитываем префикс кэша
+        $cachePrefix = config('cache.prefix', '');
+        $cacheKey = $cachePrefix ? $cachePrefix . ':article_' . $comment->article_id : 'article_' . $comment->article_id;
+        
+        // Удаляем напрямую из БД и через Cache::forget
+        DB::table('cache')->where('key', $cacheKey)->delete();
+        Cache::forget('article_' . $comment->article_id);
 
         return redirect()->route('comment.moderate')
             ->with('message', 'The comment has been approved and published.');
@@ -123,6 +134,12 @@ class CommentController extends Controller
                 }
             }
 
+            // Очищаем кэш статьи, чтобы обновить список комментариев
+            $cachePrefix = config('cache.prefix', '');
+            $cacheKey = $cachePrefix ? $cachePrefix . ':article_' . $article->id : 'article_' . $article->id;
+            DB::table('cache')->where('key', $cacheKey)->delete();
+            Cache::forget('article_' . $article->id);
+            
             return redirect()->route('article.show', ['article' => $article->id])
                 ->with('message', 'Ваш комментарий отправлен на модерацию. Он будет опубликован после проверки модератором.');
         } catch (\Exception $e) {
@@ -175,6 +192,12 @@ class CommentController extends Controller
 
         $comment->text = $request->text;
         $comment->save();
+        
+        // Очищаем кэш статьи, чтобы отобразить обновленный комментарий
+        $cachePrefix = config('cache.prefix', '');
+        $cacheKey = $cachePrefix ? $cachePrefix . ':article_' . $article->id : 'article_' . $article->id;
+        DB::table('cache')->where('key', $cacheKey)->delete();
+        Cache::forget('article_' . $article->id);
 
         return redirect()->route('article.show', ['article' => $article->id])
             ->with('message', 'Comment updated successfully');
@@ -192,8 +215,15 @@ class CommentController extends Controller
 
         // Проверка прав через политику (пользователь может удалять только свой комментарий)
         $this->authorize('delete', $comment);
-
+        
+        $articleId = $comment->article_id;
         $comment->delete();
+        
+        // Очищаем кэш статьи, чтобы убрать удаленный комментарий
+        $cachePrefix = config('cache.prefix', '');
+        $cacheKey = $cachePrefix ? $cachePrefix . ':article_' . $articleId : 'article_' . $articleId;
+        DB::table('cache')->where('key', $cacheKey)->delete();
+        Cache::forget('article_' . $articleId);
 
         return redirect()->route('article.show', ['article' => $article->id])
             ->with('message', 'Comment deleted successfully');

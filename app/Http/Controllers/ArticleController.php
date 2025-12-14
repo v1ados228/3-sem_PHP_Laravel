@@ -12,18 +12,26 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Cache;
 
 class ArticleController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Проверка прав через политику
         $this->authorize('viewAny', Article::class);
         
-        $articles = Article::latest()->paginate(5);
+        // Получаем номер страницы из запроса
+        $page = $request->get('page', 1);
+        
+        // Кэшируем данные с учетом пагинации
+        $articles = Cache::remember('articles_page_' . $page, 3600, function () {
+            return Article::latest()->paginate(5);
+        });
+        
         return view('/article/article', ['articles'=>$articles]);
     }
 
@@ -156,6 +164,49 @@ class ArticleController extends Controller
             \Log::error('Stack trace: ' . $e->getTraceAsString());
         }
         
+        // Удаляем кэш главной страницы со всеми страницами пагинации
+        $cacheDriver = config('cache.default');
+        $cachePrefix = config('cache.prefix', '');
+        
+        \Log::info("Cache driver: {$cacheDriver}, prefix: '{$cachePrefix}'");
+        
+        if ($cacheDriver === 'database') {
+            // Получаем все ключи кэша до удаления
+            $allCacheKeysBefore = DB::table('cache')->pluck('key')->toArray();
+            \Log::info("Cache keys before deletion: " . implode(', ', $allCacheKeysBefore));
+            
+            // Получаем все ключи кэша
+            $allCacheKeys = DB::table('cache')->pluck('key');
+            $deletedCount = 0;
+            $deletedKeys = [];
+            
+            foreach ($allCacheKeys as $key) {
+                // Убираем префикс для проверки
+                $keyWithoutPrefix = $key;
+                if ($cachePrefix && strpos($key, $cachePrefix) === 0) {
+                    $keyWithoutPrefix = substr($key, strlen($cachePrefix) + 1); // +1 для разделителя ':'
+                }
+                
+                // Если ключ начинается с 'articles_page_', удаляем его
+                if (strpos($keyWithoutPrefix, 'articles_page_') === 0) {
+                    DB::table('cache')->where('key', $key)->delete();
+                    $deletedCount++;
+                    $deletedKeys[] = $key;
+                }
+            }
+            
+            \Log::info("Deleted {$deletedCount} cache entries: " . implode(', ', $deletedKeys));
+            
+            // Получаем все ключи кэша после удаления
+            $allCacheKeysAfter = DB::table('cache')->pluck('key')->toArray();
+            \Log::info("Cache keys after deletion: " . implode(', ', $allCacheKeysAfter));
+        }
+        
+        // Также удаляем через Cache::forget для надежности
+        for ($i = 1; $i <= 100; $i++) {
+            Cache::forget('articles_page_' . $i);
+        }
+        
         return redirect()->route('article.index')->with('message','Create successful');
     }
 
@@ -167,11 +218,18 @@ class ArticleController extends Controller
         // Проверка прав через политику
         $this->authorize('view', $article);
         
-        // Загружаем только одобренные комментарии с пользователями
-        $article->load(['comments' => function ($query) {
-            $query->where('is_approved', true)->with('user');
-        }]);
-        return view('article.show', ['article'=> $article]);
+        // Кэшируем данные статьи с комментариями навсегда (rememberForever)
+        $cachedArticle = Cache::rememberForever('article_' . $article->id, function () use ($article) {
+            // Перезагружаем статью с комментариями
+            $article->refresh();
+            // Загружаем только одобренные комментарии с пользователями
+            $article->load(['comments' => function ($query) {
+                $query->where('is_approved', true)->with('user');
+            }]);
+            return $article;
+        });
+        
+        return view('article.show', ['article'=> $cachedArticle]);
     }
 
     /**
@@ -203,6 +261,10 @@ class ArticleController extends Controller
         $article->text = $request->text;
         $article->users_id = auth()->id();
         $article->save();
+        
+        // Очищаем весь кэш
+        Cache::flush();
+        
         return redirect()->route('article.show', ['article'=>$article->id])->with('message','Update successful');
     }
 
@@ -215,6 +277,10 @@ class ArticleController extends Controller
         $this->authorize('delete', $article);
         
         $article->delete();
+        
+        // Очищаем весь кэш
+        Cache::flush();
+        
         return redirect()->route('article.index')->with('message','Delete successful');
     }
 }
