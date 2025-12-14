@@ -12,7 +12,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Для тестирования: отправка статистики каждую минуту
+        $schedule->command('statistics:daily')->everyMinute();
+        
+        // Для продакшена: отправка статистики каждый день в 23:59
+        // $schedule->command('statistics:daily')
+        //     ->dailyAt('23:59')
+        //     ->timezone('Europe/Moscow');
     }
 
     /**

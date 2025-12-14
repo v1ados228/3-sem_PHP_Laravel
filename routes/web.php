@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Middleware\LogArticleView;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +32,19 @@ Route::get('/full_image/{img}', [MainController::class, 'show'])->name('main.sho
 
 //Article - защищенные маршруты (требуется аутентификация)
 Route::middleware('auth:sanctum')->group(function () {
-    Route::resource('/article', ArticleController::class);
+    // Роут для просмотра статьи с middleware логирования просмотров
+    Route::get('/article/{article}', [ArticleController::class, 'show'])
+        ->middleware(LogArticleView::class)
+        ->name('article.show');
+    
+    // Остальные роуты для статей
+    Route::get('/article', [ArticleController::class, 'index'])->name('article.index');
+    Route::get('/article/create', [ArticleController::class, 'create'])->name('article.create');
+    Route::post('/article', [ArticleController::class, 'store'])->name('article.store');
+    Route::get('/article/{article}/edit', [ArticleController::class, 'edit'])->name('article.edit');
+    Route::put('/article/{article}', [ArticleController::class, 'update'])->name('article.update');
+    Route::patch('/article/{article}', [ArticleController::class, 'update'])->name('article.update');
+    Route::delete('/article/{article}', [ArticleController::class, 'destroy'])->name('article.destroy');
     
     //Comments - защищенные маршруты
     Route::post('/article/{article}/comment', [CommentController::class, 'store'])->name('article.comment.store');

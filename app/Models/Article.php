@@ -31,4 +31,12 @@ class Article extends Model
     {
         return $this->belongsTo(User::class, 'users_id');
     }
+
+    /**
+     * Получить просмотры статьи
+     */
+    public function views()
+    {
+        return $this->hasMany(ArticleView::class);
+    }
 }
