@@ -19,25 +19,20 @@ use App\Http\Middleware\LogArticleView;
 |
 */
 
-//Auth - публичные маршруты (без аутентификации)
+//Main - публичные маршруты
+Route::get('/', [MainController::class, 'index'])->name('main.index');
+Route::get('/full_image/{img}', [MainController::class, 'show'])->name('main.show');
+
+// Auth - публичные маршруты (для веб-форм)
 Route::get('/auth/register', [AuthController::class, 'showRegister'])->name('auth.register.show');
 Route::post('/auth/register', [AuthController::class, 'register'])->name('auth.register');
 Route::get('/auth/login', [AuthController::class, 'showLogin'])->name('auth.login.show');
 Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
-//Main - публичные маршруты
-Route::get('/', [MainController::class, 'index'])->name('main.index');
-Route::get('/full_image/{img}', [MainController::class, 'show'])->name('main.show');
-
-//Article - защищенные маршруты (требуется аутентификация)
+// Article/Comment/Notification - веб-маршруты (для текущих blade-вьюх)
 Route::middleware('auth:sanctum')->group(function () {
-    // Роут для просмотра статьи с middleware логирования просмотров
-    Route::get('/article/{article}', [ArticleController::class, 'show'])
-        ->middleware(LogArticleView::class)
-        ->name('article.show');
-    
-    // Остальные роуты для статей
+    // Статьи
     Route::get('/article', [ArticleController::class, 'index'])->name('article.index');
     Route::get('/article/create', [ArticleController::class, 'create'])->name('article.create');
     Route::post('/article', [ArticleController::class, 'store'])->name('article.store');
@@ -45,24 +40,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/article/{article}', [ArticleController::class, 'update'])->name('article.update');
     Route::patch('/article/{article}', [ArticleController::class, 'update'])->name('article.update');
     Route::delete('/article/{article}', [ArticleController::class, 'destroy'])->name('article.destroy');
-    
-    //Comments - защищенные маршруты
+    Route::get('/article/{article}', [ArticleController::class, 'show'])
+        ->middleware(LogArticleView::class)
+        ->name('article.show');
+
+    // Комментарии
     Route::post('/article/{article}/comment', [CommentController::class, 'store'])->name('article.comment.store');
     Route::get('/article/{article}/comment/{comment}/edit', [CommentController::class, 'edit'])->name('article.comment.edit');
     Route::put('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
     Route::patch('/article/{article}/comment/{comment}', [CommentController::class, 'update'])->name('article.comment.update');
     Route::delete('/article/{article}/comment/{comment}', [CommentController::class, 'destroy'])->name('article.comment.destroy');
-    
-    //Модерация комментариев (только для модераторов) - должно быть ПЕРЕД /comment/{comment}
+
+    // Модерация комментариев (только для модераторов)
     Route::get('/comment/moderate', [CommentController::class, 'moderate'])->name('comment.moderate');
     Route::patch('/comment/{comment}/approve', [CommentController::class, 'approve'])->name('comment.approve');
     Route::delete('/comment/{comment}/reject', [CommentController::class, 'reject'])->name('comment.reject');
-    
-    //Общие маршруты комментариев (должны быть после специфичных)
+
+    // Общие маршруты комментариев
     Route::get('/comment/{comment}', [CommentController::class, 'show'])->name('comment.show');
     Route::get('/comment', [CommentController::class, 'index'])->name('comment.index');
-    
-    //Уведомления
+
+    // Уведомления
     Route::get('/notification/{notification}/read', [NotificationController::class, 'markAsReadAndRedirect'])->name('notification.read');
     Route::get('/notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
 });

@@ -835,6 +835,19 @@
                 padding: 2rem
             }
         }
+
+        /* Кастомные стили для меню */
+        .nav-link.nav-main {
+            color: #6c757d; /* серая по умолчанию */
+        }
+
+        .nav-link.nav-main:hover {
+            color: #000000; /* при наведении — чёрная */
+        }
+
+        .nav-link.nav-main.active {
+            color: #000000; /* активная вкладка — чёрная */
+        }
     </style>
 </head>
 
@@ -851,28 +864,40 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('main.index') }}">Home</a>
+                            <a class="nav-link nav-main {{ request()->routeIs('main.index') ? 'active' : '' }}" href="{{ route('main.index') }}">
+                                Home
+                            </a>
                         </li>
                         @auth
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('article.index') }}">Articles</a>
+                            <a class="nav-link nav-main {{ request()->routeIs('article.index') ? 'active' : '' }}" href="{{ route('article.index') }}">
+                                Articles
+                            </a>
                         </li>
                         @can('create', App\Models\Article::class)
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('article.create') }}">Create Article</a>
+                            <a class="nav-link nav-main {{ request()->routeIs('article.create') ? 'active' : '' }}" href="{{ route('article.create') }}">
+                                Create Article
+                            </a>
                         </li>
                         @endcan
                         @if(auth()->check() && auth()->user()->isModerator())
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('comment.moderate') }}">Moderate Comments</a>
+                            <a class="nav-link nav-main {{ request()->routeIs('comment.moderate') ? 'active' : '' }}" href="{{ route('comment.moderate') }}">
+                                Moderate Comments
+                            </a>
                         </li>
                         @endif
                         @endauth
                         <li class="nav-item">
-                            <a class="nav-link" href="/about">About</a>
+                            <a class="nav-link nav-main {{ request()->is('about') ? 'active' : '' }}" href="/about">
+                                About
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/contact">Contact</a>
+                            <a class="nav-link nav-main {{ request()->is('contact') ? 'active' : '' }}" href="/contact">
+                                Contact
+                            </a>
                         </li>
                     </ul>
                     <div class="d-flex gap-2 align-items-center">
@@ -884,22 +909,41 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
                                         <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
                                     </svg>
-                                    @if(auth()->user()->unreadNotifications()->count() > 0)
+                                    @php
+                                        // Подсчитываем все непрочитанные уведомления
+                                        $validUnreadCount = auth()->user()->unreadNotifications()->count();
+                                    @endphp
+                                    @if($validUnreadCount > 0)
                                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge">
-                                            {{ auth()->user()->unreadNotifications()->count() }}
+                                            {{ $validUnreadCount }}
                                         </span>
                                     @endif
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="max-width: 400px; max-height: 500px; overflow-y: auto;" id="notificationsList">
                                     @php
+                                        // Получаем все непрочитанные уведомления
                                         $unreadNotifications = auth()->user()->unreadNotifications()->latest()->take(10)->get();
+                                        // Собираем все ID статей и проверяем их существование одним запросом
+                                        $articleIds = $unreadNotifications->map(function ($notification) {
+                                            return $notification->data['article_id'] ?? null;
+                                        })->filter()->unique()->values()->toArray();
+                                        $existingArticleIds = !empty($articleIds) 
+                                            ? \App\Models\Article::whereIn('id', $articleIds)->pluck('id')->toArray() 
+                                            : [];
                                     @endphp
                                     @if($unreadNotifications->count() > 0)
                                         @foreach($unreadNotifications as $notification)
+                                            @php
+                                                $articleId = $notification->data['article_id'] ?? null;
+                                                $articleExists = $articleId && in_array($articleId, $existingArticleIds);
+                                            @endphp
                                             <li>
-                                                <a class="dropdown-item" href="{{ route('notification.read', ['notification' => $notification->id]) }}">
+                                                <a class="dropdown-item {{ !$articleExists ? 'text-muted' : '' }}" href="{{ route('notification.read', ['notification' => $notification->id]) }}">
                                                     <div class="d-flex flex-column">
                                                         <strong>{{ $notification->data['article_title'] ?? 'Новая статья' }}</strong>
+                                                        @if(!$articleExists)
+                                                            <small class="text-danger">(Статья удалена)</small>
+                                                        @endif
                                                         <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
                                                     </div>
                                                 </a>
@@ -975,11 +1019,16 @@
                             data.notifications.forEach(notification => {
                                 const li = document.createElement('li');
                                 const a = document.createElement('a');
-                                a.className = 'dropdown-item';
+                                a.className = 'dropdown-item' + (notification.article_exists === false ? ' text-muted' : '');
                                 a.href = '/notification/' + notification.id + '/read';
+                                let deletedBadge = '';
+                                if (notification.article_exists === false) {
+                                    deletedBadge = '<small class="text-danger">(Статья удалена)</small>';
+                                }
                                 a.innerHTML = `
                                     <div class="d-flex flex-column">
                                         <strong>${notification.article_title || 'Новая статья'}</strong>
+                                        ${deletedBadge}
                                         <small class="text-muted">${notification.created_at}</small>
                                     </div>
                                 `;
